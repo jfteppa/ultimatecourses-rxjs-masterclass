@@ -1,5 +1,5 @@
-import { Subject, interval } from 'rxjs';
-import { tap, multicast, refCount, share, take } from 'rxjs/operators';
+import { BehaviorSubject, interval, Subject } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 const observer = {
   next: (val) => console.log('next', val),
@@ -8,92 +8,55 @@ const observer = {
 };
 
 const subject = new Subject();
-const interval$ = interval(2000).pipe(
-  tap((i) => console.log('new interval', i))
-);
 
-// interval$.subscribe(subject);
+const subscription = subject.subscribe(observer);
 
-const subscribe1 = subject.subscribe(observer);
-const subscribe2 = subject.subscribe(observer);
+subject.next('Hello');
+// subscription gets 'Hello'
 
-const multicastedInterval$ = interval$.pipe(
-  // multicast(() => new Subject()),
-  // handles the auto connect
-  // refCount()
+const subscription2 = subject.subscribe(observer);
+/**
+ * subscription2 gets nothing
+ */
 
-  /*
-   * We can actually optimize this example even further. Because multicasting
-   * with a refCount is so common, RxJS offers an operator that
-   * does both of these things for us, the share operator. This let's us replace
-   * multicast and refCount with share for the same behavior.
-   */
-
-  // multicast + refCount
-  share()
-);
+subject.next('World');
+/**
+ * subscription and subscription2 gets 'World'
+ */
 
 /*
- * Instead of explicitly calling connect(), you can instead use the
- * refCount operator. refCount will automatically connect the Subject
- * to the source for you when the first subscriber arrives, and disconnect
- * when the subscriber count hits zero.
+ * BehaviorSubject's accept an argument, the initial seed value.
+ * This value will be emitted to subscribers until .next is called
+ * again. New subscribers to BehaviorSubject's always receieve the
+ * last emitted value on subscription.
  */
 
-// we can remove this line after we add the refCount
-// const connectedSub = multicastedInterval$.connect();
+const subject2 = new BehaviorSubject('Hello 2');
 
-const subscribe3 = multicastedInterval$.subscribe(observer);
-const subscribe4 = multicastedInterval$.subscribe(observer);
+/*
+ * Subscribers to the BehaviorSubject will receieve the seed value,
+ * or last emitted value. In this case no other value has been
+ * emitted so the subscriber will initially receive 'Hello'
+ */
+
+/**
+ * they both get the initial value because no other value was emitted yet.
+ */
+const subscription3 = subject2.subscribe(observer);
+const subscription4 = subject2.subscribe(observer);
+
+subject2.next('World 2');
 
 setTimeout(() => {
-  // the observer stops but the interval continues
-  // subscribe3.unsubscribe();
-  // subscribe4.unsubscribe();
+  /**
+   * after 3 seconds we subscribe and it gets the latest value
+   * instead of nothing
+   */
+  subject2.subscribe(observer);
 
-  // we can remove this line after we add the refCount
-  // connectedSub.unsubscribe(); // the interval stops
-
-  // after adding the refCount
-  subscribe3.unsubscribe();
-  subscribe4.unsubscribe();
+  /**
+   * if we want to get the latest value
+   * without subscribing
+   */
+  console.log('last value without subscribing', subject2.getValue());
 }, 3000);
-
-/**
- * to be able to see the steps
- */
-
-/**
- * with this approach we can see how the observers stops
- * but the interval keeps running
- *
- */
-/* const subject = new Subject();
-
-interval(2000)
-  .pipe(
-    tap((i) => console.log('new interval', i)),
-    take(10)
-  )
-  .subscribe(subject);
-
-const subscribe1 = subject.subscribe(observer);
-const subscribe2 = subject.subscribe(observer); */
-
-// ======================================================
-
-/**
- * with this approach we can see how the observers and the interval stops
- */
-/* const interval$ = interval(2000).pipe(
-  tap((i) => console.log('new interval', i)),
-  take(10),
-  share()
-);
-const subscribe1 = interval$.subscribe(observer);
-const subscribe2 = interval$.subscribe(observer); */
-
-/* setTimeout(() => {
-  subscribe1.unsubscribe();
-  subscribe2.unsubscribe();
-}, 3000); */
