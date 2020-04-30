@@ -21,9 +21,16 @@ const interval$ = interval(2000).pipe(
   tap((value) => console.log('new interval', value))
 );
 
-interval$.pipe(take(5)).subscribe(observer);
-interval$.pipe(take(5)).subscribe(observer);
+const subscibe1 = interval$.pipe(take(5)).subscribe(observer);
+const subscibe2 = interval$.pipe(take(5)).subscribe(observer);
 
+subscibe1.add(subscibe2);
+
+setTimeout(() => {
+  console.log(`unsubscribing all observer's subscriptions`);
+  subscibe1.unsubscribe();
+  // subscibe2.unsubscribe();
+}, 5000);
 /**
  * it logs
  * new interval 0
@@ -37,7 +44,12 @@ interval$.pipe(take(5)).subscribe(observer);
  * next 1
  */
 
-interval$.pipe(take(5)).subscribe(subject$);
+const subscibe3 = interval$.pipe(take(5)).subscribe(subject$);
+
+setTimeout(() => {
+  console.log(`unsubscribing all subject's subscriptions`);
+  subscibe3.unsubscribe();
+}, 5000);
 
 /**
  * it logs:
