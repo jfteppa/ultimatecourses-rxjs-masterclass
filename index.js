@@ -1,4 +1,6 @@
-import { ReplaySubject } from 'rxjs';
+import { fromEvent, interval } from 'rxjs';
+import { ajax } from 'rxjs/ajax';
+import { shareReplay, mergeMapTo, share, take, tap } from 'rxjs/operators';
 
 const observer = {
   next: (val) => console.log('next', val),
@@ -6,35 +8,58 @@ const observer = {
   complete: () => console.log('complete'),
 };
 
-/**
- * ReplaySubject does not have an inital value
- */
+const ajax$ = ajax('https://api.github.com/users/octocat');
+
+const click$ = fromEvent(document, 'click');
 
 /*
- * ReplaySubject's accept an optional argument, the number
- * of previously emitted values you wish to 'replay'
- * on subscription. These values will be emitted in sequence
- * beginning with the most recent, to any late subscribers.
+ * shareReplay turns a unicast observable into multicasted
+ * observable, utilizing a ReplaySubject behind the scenes.
  *
- * By default, if no arguments are supplied all values are replayed.
+ * In this example, we are mapping any clicks to an ajax
+ * request, sharing the response.
  */
-const subject = new ReplaySubject();
 
-subject.next('Hello');
-subject.next('World');
-subject.next('Goodbay');
+const sharedClick$ = click$.pipe(
+  mergeMapTo(interval(1000).pipe(take(5))),
+  // mergeMapTo(ajax$),
+  /*
+   * By default shareReplay shares all old values, like
+   * a standard ReplaySubject. In this case, we only want
+   * to share the most recent response.
+   */
 
-subject.subscribe(observer); // Hello, World, Goodbay
+  /**
+   * this makes new subscriber not to trigger the ajax
+   * more than 1 time, comment out to see the network after 1 click
+   */
+  // shareReplay()
 
-const subject2 = new ReplaySubject(3);
+  // only the n last values
+  // shareReplay(2)
 
-subject2.next('1');
-subject2.next('2');
-subject2.next('3');
-subject2.next('4');
-subject2.next('5');
+  /**
+   * the 2nd argument sets how long are all values available
+   */
+  shareReplay(2, 2000)
+);
 
-subject2.subscribe(observer); // 3, 4, 5, 6, 7
+sharedClick$.subscribe(observer);
 
-subject2.next('6');
-subject2.next('7');
+// it does not trigger the ajax after adding shareReplay()
+sharedClick$.subscribe(observer);
+
+/*
+ * Late subscribers will be replayed old value(s).
+ */
+setTimeout(() => {
+  console.log('subscribing');
+
+  /**
+   * it does not trigger the ajax request
+   *
+   * but if we click more than 1 time
+   * it will get all the data
+   */
+  sharedClick$.subscribe(observer);
+}, 5000);
