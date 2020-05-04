@@ -127,3 +127,21 @@ body {
 #loading-overlay.open {
   animation-name: fadeInDown;
 }
+
+.container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+#ball {
+  height: 75px;
+  width: 75px;
+  background-color: red;
+  border-radius: 50%;
+  position: absolute;
+  translate: translate3d(0, 0, 0);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
