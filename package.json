@@ -7,9 +7,13 @@
     "parcel-bundler": "^1.12.3",
     "rxjs": "^6.5.3"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/jasmine": "^3.5.10",
+    "jasmine": "^3.5.0"
+  },
   "scripts": {
-    "start": "parcel index.html"
+    "start": "parcel index.html",
+    "test": "jasmine"
   },
   "author": "Brian Troncone, Ultimate Courses",
   "license": "MIT"
