@@ -71,3 +71,18 @@ body {
   position: relative;
   top: 6px;
 }
+
+#text-input {
+  margin: 20px auto;
+  border-radius: 4px;
+  height: 20px;
+  width: 150px;
+  padding: 5px;
+  border: 1px solid black;
+  font-size: 16px;
+}
+
+#counter {
+  margin-top: 10px;
+  font-size: 30px;
+}
