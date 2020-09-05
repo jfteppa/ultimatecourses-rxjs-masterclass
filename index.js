@@ -1,87 +1,82 @@
 // begin lesson code
-import { interval, fromEvent, throwError } from 'rxjs';
-import { take, takeUntil, finalize } from 'rxjs/operators';
-
-// elems
-const counter = document.getElementById('counter');
+import { fromEvent, throwError, timer, range, of, Observable } from 'rxjs';
+import {
+  takeUntil,
+  finalize,
+  zip,
+  mergeMap,
+  retryWhen,
+  mergeMapTo,
+  catchError,
+} from 'rxjs/operators';
 
 // streams
 const click$ = fromEvent(document, 'click');
 
-// it completes
-/* const sub = interval(1000)
-  .pipe(take(3))
-  .subscribe({
-    next: (val) => {
-      counter.innerHTML = val;
-    },
-    complete: () => {
-      counter.innerHTML = 'Stopped!';
-    },
-  }); */
+const { aaa, bbb = 2, ccc = 5 } = { aaa: 1, bbb: 3 };
+console.log(aaa, bbb, ccc);
 
-// it stops at #2 but it does not complete.
-/* const sub = interval(1000).subscribe({
-  next: (val) => {
-    counter.innerHTML = val;
-  },
-  complete: () => {
-    counter.innerHTML = 'Stopped!';
-  },
-}); */
+/*
+ * Remember, functions that appears in the pipe method will be passed
+ * an observable source and must return a new observable which will be used
+ * as an source observable for the next operator.
+ */
+export function customRetry({
+  excludedStatusCodes = [],
+  retryAttemps = 3,
+  scalingDuration = 1000,
+} = {}) {
+  /*
+   * rather than having our custom function accept a source observable,
+   * let's have it accept an option object instead.
+   * We can then return a function that accepts a source observale
+   */
+  return function (source) {
+    // returning new observable.
+    return source.pipe(
+      retryWhen((attempts) => {
+        return attempts.pipe(
+          mergeMap((error, i) => {
+            const attemptNumber = i + 1;
+            if (
+              attemptNumber > retryAttemps ||
+              excludedStatusCodes.find((e) => e === error.status)
+            ) {
+              console.log('Giving up!');
+              return throwError(error);
+            }
+            console.log(`Attempt ${attemptNumber}: retrying in ${attemptNumber * 1000}ms`);
+            return timer(attemptNumber * scalingDuration);
+          })
+        );
+      })
+    );
+  };
+}
 
-// calling unsubscribe will not trigger complete callbacks
-/* setTimeout(() => {
-  sub.unsubscribe();
-}, 3000); */
-
-// it will call finalize when unsubscribe.
-// it will also work with take, takeUntil, etc.
-/* const sub = interval(1000)
+click$
   .pipe(
-    finalize(() => {
-      counter.innerHTML = 'Stopped!';
-    })
+    mergeMapTo(
+      throwError({
+        status: 400,
+        message: 'Server error',
+      }).pipe(
+        /* retryWhen((attempts) => {
+          return attempts.pipe(
+            mergeMap((error, i) => {
+              const attemptNumber = i + 1;
+              if (attemptNumber > 3 || [404, 500].find((e) => e === error.status)) {
+                console.log('Giving up!');
+                return throwError(error);
+              }
+              console.log(`Attempt ${attemptNumber}: retrying in ${attemptNumber * 1000}ms`);
+              return timer(attemptNumber * 1000);
+            })
+          );
+        }), */
+        customRetry({ retryAttemps: 4 }),
+        catchError((err) => of(err.message))
+      )
+    )
   )
-  .subscribe((val) => {
-    counter.innerHTML = val;
-  });
-
-setTimeout(() => {
-  sub.unsubscribe();
-}, 3000); */
-
-/* const sub = interval(1000)
-  .pipe(
-    take(3),
-    finalize(() => {
-      console.log('stopped');
-    })
-  )
-  .subscribe({
-    next: (val) => {
-      counter.innerHTML = val;
-    },
-    complete: () => {
-      console.log('stopped 2');
-    },
-  }); */
-
-const sub = throwError('Error xx')
-  .pipe(
-    take(3),
-    finalize(() => {
-      console.log('stopped');
-    })
-  )
-  .subscribe({
-    next: (val) => {
-      counter.innerHTML = val;
-    },
-    complete: () => {
-      console.log('stopped 2');
-    },
-    error: (error) => {
-      console.log(error);
-    },
-  });
+  .subscribe(console.log);
