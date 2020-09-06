@@ -72,12 +72,17 @@ body {
   top: 6px;
 }
 
-p {
+#box {
+  position: relative;
+  height: 100px;
+  width: 100px;
+  background-color: red;
   margin-top: 20px;
+  left: 0;
+  transition: left 100ms ease-in-out;
 }
 
-.radio-container {
+.container {
   display: flex;
-  align-items: center;
   justify-content: center;
 }

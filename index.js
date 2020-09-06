@@ -1,119 +1,73 @@
 // begin lesson code
-import { interval, fromEvent, Subject } from 'rxjs';
-import { takeUntil, map, throttleTime } from 'rxjs/operators';
+import { fromEvent, partition } from 'rxjs';
+import { filter, pluck } from 'rxjs/operators';
+
+const MOVE_SPEED = 20;
+let leftPosition = 0;
+
+// elems
+const box = document.getElementById('box');
+
+// streams
+const click$ = fromEvent(document, 'click');
+const xPositionClick$ = click$.pipe(pluck('clientX'));
+
+// xPositionClick$.subscribe((xPos) => {
+//   /*
+//    * Generally if you have a single if statement in
+//    * you subscribe block, prefer filter instead.
+//    */
+//   if (xPos < window.innerWidth / 2) {
+//     box.style.left = `${(leftPosition -= MOVE_SPEED)}px`;
+//   }
+// });
+
+/* const leftSideClick$ = xPositionClick$.pipe(filter((xPos) => xPos < window.innerWidth / 2));
+
+leftSideClick$.subscribe((xPos) => {
+  box.style.left = `${(leftPosition -= MOVE_SPEED)}px`;
+}); */
 
 /*
- * 1st approach, explicitly unsubscribe to every
- * subscription.
+ * Filtering for specific condition before subscribe
  */
 
-/* const clickSub = fromEvent(document, 'click')
-  .pipe(
-    map((event) => ({
-      x: event.clientX,
-      y: event.clientY,
-    }))
-  )
-  .subscribe((v) => {
-    // take action
-    console.log(v);
-  });
+// xPositionClick$.pipe(
+//   filter(xPos => xPos < window.innerWidth / 2)
+// ).subscribe(xPos => {
+//   box.style.left = `${leftPosition -= MOVE_SPEED}px`;
+// });
 
-const scrollSub = fromEvent(document, 'scroll')
-  .pipe(throttleTime(30))
-  .subscribe((v) => {
-    // take action
-    console.log(v);
-  });
+/*
+ * In case of if / else in subscribe...
+ */
 
-const intervalSub = interval(1000).subscribe((v) => {
-  // take action
-  console.log(v);
+// xPositionClick$.subscribe(xPos => {
+//   /*
+//    * Generally if you have a single if statement in
+//    * you subscribe block, prefer filter instead.
+//    */
+//   if(xPos < window.innerWidth / 2) {
+//     box.style.left = `${leftPosition -= MOVE_SPEED}px`;
+//   } else {
+//     box.style.left = `${leftPosition += MOVE_SPEED}px`;
+//   }
+// });
+
+/*
+ * You can use partition instead to create
+ * 2 separate streams.
+ */
+
+const [clickLeft$, clickRight$] = partition(
+  xPositionClick$,
+  (xPos) => xPos < window.innerWidth / 2
+);
+
+clickLeft$.subscribe(() => {
+  box.style.left = `${(leftPosition -= MOVE_SPEED)}px`;
 });
 
-setTimeout(() => {
-  clickSub.unsubscribe();
-  scrollSub.unsubscribe();
-  intervalSub.unsubscribe();
-}, 2000); */
-
-/*
- * 2nd approach, add all subscriptions together and
- * unsubscribe at once.
- */
-
-/* const subscription = fromEvent(document, 'click')
-  .pipe(
-    map((event) => ({
-      x: event.clientX,
-      y: event.clientY,
-    }))
-  )
-  .subscribe((v) => {
-    // take action
-    console.log(v);
-  });
-
-subscription.add(
-  fromEvent(document, 'scroll')
-    .pipe(throttleTime(30))
-    .subscribe((v) => {
-      // take action
-      console.log(v);
-    })
-);
-
-subscription.add(
-  interval(1000).subscribe((v) => {
-    // take action
-    console.log(v);
-  })
-);
-
-setTimeout(() => {
-  subscription.unsubscribe();
-}, 2000); */
-
-/*
- * 3rd (my preferred) approach, use a Subject and the
- * takeUntil operator to automate the unsubscribe
- * process on a hook.
- */
-
-const onDestroy$ = new Subject();
-
-fromEvent(document, 'click')
-  .pipe(
-    map((event) => ({
-      x: event.clientX,
-      y: event.clientY,
-    })),
-    takeUntil(onDestroy$)
-  )
-  .subscribe((v) => {
-    // take action
-    console.log(v);
-  });
-
-fromEvent(document, 'scroll')
-  .pipe(throttleTime(30), takeUntil(onDestroy$))
-  .subscribe((v) => {
-    // take action
-    console.log(v);
-  });
-
-interval(1000)
-  .pipe(takeUntil(onDestroy$))
-  .subscribe((v) => {
-    // take action
-    console.log(v);
-  });
-
-setTimeout(() => {
-  /*
-   * the next call is the one that stops the subscribers
-   * that have takeUntil with the onDestroy$ Subject
-   */
-  onDestroy$.next();
-  onDestroy$.complete();
-}, 2000);
+clickRight$.subscribe(() => {
+  box.style.left = `${(leftPosition += MOVE_SPEED)}px`;
+});
