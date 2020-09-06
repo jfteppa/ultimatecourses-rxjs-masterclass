@@ -1,41 +1,119 @@
 // begin lesson code
-import { fromEvent, of, BehaviorSubject, Subject } from 'rxjs';
-import { concatMap, delay, withLatestFrom, pluck } from 'rxjs/operators';
+import { interval, fromEvent, Subject } from 'rxjs';
+import { takeUntil, map, throttleTime } from 'rxjs/operators';
 
-// elems
-const radioButtons = document.querySelectorAll('.radio-option');
+/*
+ * 1st approach, explicitly unsubscribe to every
+ * subscription.
+ */
 
-const store$ = new BehaviorSubject({
-  testId: 'abc123',
-  complete: false,
-  moreData: {},
+/* const clickSub = fromEvent(document, 'click')
+  .pipe(
+    map((event) => ({
+      x: event.clientX,
+      y: event.clientY,
+    }))
+  )
+  .subscribe((v) => {
+    // take action
+    console.log(v);
+  });
+
+const scrollSub = fromEvent(document, 'scroll')
+  .pipe(throttleTime(30))
+  .subscribe((v) => {
+    // take action
+    console.log(v);
+  });
+
+const intervalSub = interval(1000).subscribe((v) => {
+  // take action
+  console.log(v);
 });
 
-const saveAnswer = (answer, testId) => {
-  // simulate delayed request
-  return of({
-    answer,
-    testId,
-    // TRY TO AVOID THIS
-    // testId: store$.value.testId,
-  }).pipe(delay(200));
-};
+setTimeout(() => {
+  clickSub.unsubscribe();
+  scrollSub.unsubscribe();
+  intervalSub.unsubscribe();
+}, 2000); */
 
-// streams
-const answerChange$ = fromEvent(radioButtons, 'click');
+/*
+ * 2nd approach, add all subscriptions together and
+ * unsubscribe at once.
+ */
 
-answerChange$
+/* const subscription = fromEvent(document, 'click')
   .pipe(
-    /*
-     * Instead use withLatestFrom to grab extra
-     * state that you may need.
-     */
-    // concatMap((event) => {
-    //   return saveAnswer(event.target.value);
-    // })
-    withLatestFrom(store$.pipe(pluck('testId'))),
-    concatMap(([event, testId]) => {
-      return saveAnswer(event.target.value, testId);
-    })
+    map((event) => ({
+      x: event.clientX,
+      y: event.clientY,
+    }))
   )
-  .subscribe(console.log);
+  .subscribe((v) => {
+    // take action
+    console.log(v);
+  });
+
+subscription.add(
+  fromEvent(document, 'scroll')
+    .pipe(throttleTime(30))
+    .subscribe((v) => {
+      // take action
+      console.log(v);
+    })
+);
+
+subscription.add(
+  interval(1000).subscribe((v) => {
+    // take action
+    console.log(v);
+  })
+);
+
+setTimeout(() => {
+  subscription.unsubscribe();
+}, 2000); */
+
+/*
+ * 3rd (my preferred) approach, use a Subject and the
+ * takeUntil operator to automate the unsubscribe
+ * process on a hook.
+ */
+
+const onDestroy$ = new Subject();
+
+fromEvent(document, 'click')
+  .pipe(
+    map((event) => ({
+      x: event.clientX,
+      y: event.clientY,
+    })),
+    takeUntil(onDestroy$)
+  )
+  .subscribe((v) => {
+    // take action
+    console.log(v);
+  });
+
+fromEvent(document, 'scroll')
+  .pipe(throttleTime(30), takeUntil(onDestroy$))
+  .subscribe((v) => {
+    // take action
+    console.log(v);
+  });
+
+interval(1000)
+  .pipe(takeUntil(onDestroy$))
+  .subscribe((v) => {
+    // take action
+    console.log(v);
+  });
+
+setTimeout(() => {
+  /*
+   * the next call is the one that stops the subscribers
+   * that have takeUntil with the onDestroy$ Subject
+   */
+  onDestroy$.next();
+  onDestroy$.complete();
+}, 2000);
